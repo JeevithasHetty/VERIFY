@@ -1,0 +1,56 @@
+# FieldVerify production demo topology:
+# Vercel frontend -> Render web service (API + BullMQ worker in one process)
+# Render Key Value -> Redis-compatible queue
+# MongoDB Atlas -> metadata + GridFS image storage
+#
+# The embedded worker keeps deployment simple for a take-home/demo. For scale,
+# split the worker into a separate Render background worker using the same Docker image.
+
+services:
+  - type: web
+    name: fieldverify-api
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: API_BASE_PATH
+        value: /api/v1
+      - key: RUN_WORKER_IN_API
+        value: "true"
+      - key: STORAGE_PROVIDER
+        value: mongodb
+      - key: MONGODB_URI
+        sync: false
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: fieldverify-queue
+          property: connectionString
+      - key: MAX_UPLOAD_SIZE_MB
+        value: "10"
+      - key: MAX_BATCH_SIZE
+        value: "10"
+      - key: ALLOWED_MIME_TYPES
+        value: image/jpeg,image/png,image/webp
+      - key: QUEUE_NAME
+        value: image-processing
+      - key: JOB_ATTEMPTS
+        value: "3"
+      - key: JOB_BACKOFF_MS
+        value: "2000"
+      - key: LOG_LEVEL
+        value: info
+
+  - type: keyvalue
+    name: fieldverify-queue
+    plan: free
+    region: singapore
+    ipAllowList: []
+    maxmemoryPolicy: noeviction

@@ -14,7 +14,7 @@ async function start() {
       logger.info({ event: 'embedded_worker_started' }, 'BullMQ worker running inside the API service for single-service deployment');
     }
 
-    const server = app.listen(env.port, () => {
+    const server = app.listen(env.port, '0.0.0.0', () => {
       logger.info(
         { event: 'server_started', port: env.port, env: env.nodeEnv },
         `FieldVerify API listening on port ${env.port}`
